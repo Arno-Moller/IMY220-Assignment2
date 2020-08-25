@@ -14,7 +14,6 @@
 	$uID = isset($_POST["userID"]) ? $_POST["userID"] : false;
 
     $target_file = isset($_FILES["picToUpload"]["name"]) ? basename($_FILES["picToUpload"]["name"]) : false;
-	// if email and/or pass POST values are set, set the variables to those values, otherwise make them false
 ?>
 
 <!DOCTYPE html>
@@ -63,14 +62,19 @@
 								</div>
 						  	</form>";
 
+
+//					Make a SQL query to select all the images stored for the user
                     $sql = "SELECT filename FROM tbgallery WHERE user_id = " . $row['user_id'] . ";";
                     $result = $mysqli->query($sql);
 
-                    if ($result->num_rows > 0) {
-                        echo '<h2>Image Gallery</h2>
+//                    Add divs for the images to be displayed in
+                    echo '<h2>Image Gallery</h2>
                               <div class="row imageGallery">';
 
+//                    If the user has Images saved
+                    if ($result->num_rows > 0) {
 
+//                        Add the images to the gallery div
                         while($row = $result->fetch_assoc()) {
                             echo '<div class="col-3 " style="background-image: url(gallery/'. $row['filename'] .')"></div>';
                         }
@@ -78,60 +82,60 @@
 
                     }
 
+//                    If the user has clicked the submit button and user_ID is set
                     if($uID)
                     {
                         if(isset($_POST["submit"])) {
+
+//                            Get the name of the file as well as the file's path
                             $file = $_FILES["picToUpload"]["name"];
                             $imageFileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
 
+//                            Check if the images are either jpg or jpeg
                             if($imageFileType == 'jpg' || $imageFileType == 'jpeg')
                             {
+//                                If a 'gallery' folder does not exist, create one
                                 if (!file_exists('./gallery')) {
                                     mkdir('./gallery', 0777, true);
                                 }
 
+//                                Get the size of the image
                                 $check = getimagesize($_FILES["picToUpload"]["tmp_name"]);
 
+//                                If the size is obtained
                                 if($check !== false) {
                                     $filepath = "./gallery/" . $file;
 
-                                    if(move_uploaded_file($_FILES["picToUpload"]["tmp_name"], $filepath))
+//                                    If the move of the submitted image to the folder called 'gallery' is successful && its size is less than 1MB
+                                    if($_FILES["picToUpload"]["size"] < 1048576 && move_uploaded_file($_FILES["picToUpload"]["tmp_name"], $filepath))
                                     {
-                                        if((filesize($filepath) / 1000000) < 1)
-                                        {
+                                        $query = "SELECT * FROM tbgallery WHERE filename = '". $file ."' and user_id = '". $uID ."'";
+                                        $res = $mysqli->query($query);
 
-                                            $query = "SELECT * FROM tbgallery WHERE filename = '". $file ."'";
+//                                        Add image to database
+                                        if(mysqli_fetch_array($res) == false){
+
+                                            $query = "INSERT INTO tbgallery (user_id, filename) VALUES ('". $uID ."', '". $file ."');";
                                             $res = $mysqli->query($query);
-
-                                            if(mysqli_fetch_array($res) == false){
-
-                                                $query = "INSERT INTO tbgallery (user_id, filename) VALUES ('". $uID ."', '". $file ."');";
-                                                $res = $mysqli->query($query);
-                                                if($res){
-                                                    echo '<div class="col-3 " style="background-image: url(gallery/'. $file .')"></div>';
-                                                }
+                                            if($res){
+                                                echo '<div class="col-3 " style="background-image: url(gallery/'. $file .')"></div>';
                                             }
                                         }
                                     }
                                     else
                                     {
-                                        echo "Error !!";
+                                        echo "An error has occurred";
                                     }
-                                    $uploadOk = 1;
-                                }
-                                else
-                                {
-                                    $uploadOk = 0;
                                 }
 
                             } else {
-//                                echo "File is not an image.";
+                                echo "File is not an supported.";
                                 $uploadOk = 0;
                             }
 
                         }
-                        echo '</div>';
                     }
+                    echo '</div>';
 				}
 				else{
 					echo 	'<div class="alert alert-danger mt-3" role="alert">
